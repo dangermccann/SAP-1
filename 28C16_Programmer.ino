@@ -34,23 +34,23 @@
 
 // Instruction set and associated micro instructions.  
 // We reserve space for 8 steps per micro instruction, although the micro step counter is reset after step 5. 
-uint16_t microcode[] = {
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 0000 - NOOP - No operation
-  FETCH_1, FETCH_2, IO|MI, RO|AI, 0, 0, 0, 0,        // 0001 - LDA  - Load A from memory
-  FETCH_1, FETCH_2, IO|MI, RO|BI, EO|AI, 0, 0, 0,    // 0010 - ADD  - Add register A and RAM and store result in A
-  FETCH_1, FETCH_2, IO|MI, RO|BI, EO|AI|SU, 0, 0, 0, // 0011 - SUB  - Subtract RAM from register A and store result in A
-  FETCH_1, FETCH_2, IO|MI, RI|AO, 0, 0, 0, 0,        // 0100 - STA  - Store register A into memory
-  FETCH_1, FETCH_2, IO|AI, 0,     0, 0, 0, 0,        // 0101 - LDI  - Load immediate value into register A
-  FETCH_1, FETCH_2, IO|J,  0,     0, 0, 0, 0,        // 0110 - JMP  - Jump
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 0111 - JC   - Jump when the carry flag is set
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1000 - JZ   - Jump when the zero flag is set
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1001 - [undefined] 
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1010 - [undefined]
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1011 - [undefined]
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1100 - [undefined]
-  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,        // 1101 - [undefined]
-  FETCH_1, FETCH_2, AO|OI, 0,     0, 0, 0, 0,        // 1110 - OUT   - Output value in register A
-  FETCH_1, FETCH_2, HLT,   0,     0, 0, 0, 0,        // 1111 - HALT  - Halt the program counter
+/*const PROGMEM*/ uint16_t microcode[] = {
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 0000 - NOOP - No operation
+  FETCH_1, FETCH_2, IO|MI, RO|AI, 0, 0, 0, 0,           // 0001 - LDA  - Load A from memory
+  FETCH_1, FETCH_2, IO|MI, RO|BI, EO|AI|FI,0, 0, 0,     // 0010 - ADD  - Add register A and RAM and store result in A
+  FETCH_1, FETCH_2, IO|MI, RO|BI, EO|AI|SU|FI, 0, 0, 0, // 0011 - SUB  - Subtract RAM from register A and store result in A
+  FETCH_1, FETCH_2, IO|MI, RI|AO, 0, 0, 0, 0,           // 0100 - STA  - Store register A into memory
+  FETCH_1, FETCH_2, IO|AI, 0,     0, 0, 0, 0,           // 0101 - LDI  - Load immediate value into register A
+  FETCH_1, FETCH_2, IO|J,  0,     0, 0, 0, 0,           // 0110 - JMP  - Jump
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 0111 - JC   - Jump when the carry flag is set
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1000 - JZ   - Jump when the zero flag is set
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1001 - [undefined] 
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1010 - [undefined]
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1011 - [undefined]
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1100 - [undefined]
+  FETCH_1, FETCH_2, 0,     0,     0, 0, 0, 0,           // 1101 - [undefined]
+  FETCH_1, FETCH_2, AO|OI, 0,     0, 0, 0, 0,           // 1110 - OUT   - Output value in register A
+  FETCH_1, FETCH_2, HLT,   0,     0, 0, 0, 0,           // 1111 - HALT  - Halt the program counter
 };
 
 // Digits displayed on 7-segment LED display
@@ -71,7 +71,7 @@ void setup() {
   Serial.println("| John McCann's EEPROM Programmer |");
   Serial.println("+---------------------------------+");
   
-  eraseEEPROM();
+  //eraseEEPROM();
   writeMicrocode();
   //program7SegmentDisplay();
   readEEPROM();
@@ -101,6 +101,9 @@ void readEEPROM() {
 }
 
 void writeMicrocode() {
+  
+  // memcpy_P -- copies memory from Program Memory into SRAM
+  
   Serial.print("Writing microcode to EEPROM");
   
   for(int i = 0; i < sizeof(microcode)/sizeof(microcode[0]); i++) {
