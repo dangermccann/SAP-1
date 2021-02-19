@@ -27,6 +27,10 @@
 #define J     1<<0x0E  // Jump (Program Counter In)
 #define FI    1<<0x0F  // Flags Register In
 
+// Instructions that require overrides
+#define JC    0b0111   // Jump on carry
+#define JZ    0b1000   // Jump on zero
+
 // Shared micro instructions 
 // Used for first two micro steps to fetch instruction from RAM into the instruction register. 
 #define FETCH_1 CO|MI     // Copy the program counter value to the memory address register.
@@ -53,6 +57,31 @@
   FETCH_1, FETCH_2, HLT,   0,     0, 0, 0, 0,           // 1111 - HALT  - Halt the program counter
 };
 
+/*
+ * Microcode address pin assignment 
+ * A0 |
+ * A1 |-- micro step 
+ * A2 |
+ *    -
+ * A3 |
+ * A4 |-- instruction 
+ * A5 |
+ * A6 |
+ *    -
+ * A7 --- byte select (top or bottom 8-bits of control word)
+ * A8 --- CF (carry flag)
+ * A9 --- ZF (zero flag)
+ * A10 -- [unused]
+ */
+
+#define MICROCODE_STEPS 8
+#define INSTRUCTIONS 16
+#define EEPROM_COUNT 2
+#define FLAG_COUNT 4
+#define CF_FLAG 0x01
+#define ZF_FLAG 0x02
+
+
 // Digits displayed on 7-segment LED display
 // Numbers 0 though 9, blank, and hyphen 
 byte digits[] = { 0x7E, 0x12, 0xBC, 0xB6, 0xD2, 0xE6, 0xEE, 0x32, 0xFE, 0xF6, 0x00, 0x81 };
@@ -72,7 +101,8 @@ void setup() {
   Serial.println("+---------------------------------+");
   
   //eraseEEPROM();
-  writeMicrocode();
+  //writeMicrocode();
+  writeMicrocodeWithFlags();
   //program7SegmentDisplay();
   readEEPROM();
 }
@@ -98,6 +128,52 @@ void readEEPROM() {
       Serial.println(buff);
     }
   }
+}
+
+
+void writeMicrocodeWithFlags() {
+  Serial.print("Writing microcode to EEPROM");
+  
+  int totalAddresses = MICROCODE_STEPS * INSTRUCTIONS * EEPROM_COUNT * FLAG_COUNT;
+  for(int address = 0; address < totalAddresses; address++) {
+    int step        = (address >> 0) & 0x07;
+    int instruction = (address >> 3) & 0xff;
+    int byte_select = (address >> 7) & 0x01;
+    int flags       = (address >> 8) & 0x03;
+    
+    int control = microcode[address & 0x7f];
+
+    // Apply overrides for conditional JC and JZ instructions  
+    switch(instruction) {
+      case JC:
+        if((flags & CF_FLAG) && step == 2) {
+          control = IO|J;
+        }
+        break;
+        
+      case JZ:
+        if((flags & ZF_FLAG) && step == 2) {
+          control = IO|J;
+        }
+        break;
+    }
+
+    // Second EEPROM sets A7 high; controls the 8 most significant bits 
+    if(byte_select)
+      control = control >> 8;
+
+    setAddress(address, false);
+    writeByte(control);
+
+
+    if(address % 64 == 0) {
+      Serial.print(".");
+    }
+  }
+
+  delay(100);
+  Serial.println(" ");
+  Serial.println("Complete!");
 }
 
 void writeMicrocode() {
